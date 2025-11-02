@@ -32,6 +32,9 @@ namespace TrRpc
                 // 因为异步回调拿到的是一个 BaseMessage 响应，不是 Jason::Value
                 // 所以我们可以选择: 回调处理响应，传入一个promise来存储响应里面的result，然后出来再获取它
                 auto json_promise = std::make_shared<std::promise<Json::Value>>();
+                // 获取 future 并返回给调用者
+                JsonAsyncResponse fut = json_promise->get_future();
+                result = std::move(fut); // future是不可拷贝的
                 Requestor::RequestCallback cb = std::bind(&RpcCaller::Callback, this, json_promise, std::placeholders::_1);
                 bool ret = _requestor->send(conn, req, cb); // 上面auto推导的话，下面这个bind不行，因为 参数类型是function的可调用对象，上面是bind。显式以后会发生隐式类型转换
                 if (ret == false)

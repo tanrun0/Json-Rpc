@@ -42,7 +42,6 @@ namespace TrRpc
                 }
                 return true;
             }
-
         private:
             Requestor::ptr _requestor; // 发送请求需要用这个模块的特殊 send 接口
         };
@@ -120,7 +119,8 @@ namespace TrRpc
                 service_req->setMethod(method);
                 service_req->setMtype(MType::REQ_SERVICE);
                 service_req->setOptype(ServiceOptype::SERVICE_DISCOVERY);
-                auto msg_rsp = MessageFactory::create<BaseMessage>();
+                // auto msg_rsp = MessageFactory::create<BaseMessage>(); 抽象类内部有多个纯虚函数，无法被直接实例化
+                BaseMessage::ptr msg_rsp; // 声明
                 bool ret = _requestor->send(conn, service_req, msg_rsp);
                 if (ret == false)
                 {
@@ -130,7 +130,7 @@ namespace TrRpc
                 auto service_rsp = std::dynamic_pointer_cast<ServiceResponse>(msg_rsp);
                 if (service_rsp->rcode() != RCode::RCODE_OK)
                 {
-                    ERR_LOG("服务发现失败, 错误原因: %s", errReason(service_rsp->rcode()));
+                    ERR_LOG("服务发现失败, 错误原因: %s", errReason(service_rsp->rcode()).c_str());
                     return false;
                 }
                 if (service_rsp == nullptr)

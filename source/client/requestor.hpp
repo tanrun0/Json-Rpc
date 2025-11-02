@@ -44,7 +44,7 @@ namespace TrRpc
                 }
                 if (rdp->rtype == RType::REQ_ASYNC) // 根据请求处理规则，分发响应
                     rdp->response.set_value(msg);
-                if (rdp->rtype == RType::REQ_CALLBACK && rdp->calllback)
+                else if (rdp->rtype == RType::REQ_CALLBACK && rdp->calllback)
                     rdp->calllback(msg);
                 else
                     ERR_LOG("请求处理规则未知");
@@ -68,7 +68,7 @@ namespace TrRpc
             bool send(const BaseConnection::ptr &conn, const BaseMessage::ptr &req, BaseMessage::ptr &rsp)
             {
                 AsyncResponse req_future;
-                int ret = send(conn, req, req_future);
+                bool ret = send(conn, req, req_future);
                 if (ret == false)
                     return false;
                 rsp = req_future.get();
