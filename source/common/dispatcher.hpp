@@ -36,6 +36,7 @@ namespace TrRpc
     public:
         using ptr = std::shared_ptr<Dispatcher>;
         template<typename T> // 支持接受不同类型的可调用对象(区别是可调用对象的参数msg类型不同)
+        // 对不同消息的分发处理注册
         void registerHandler(MType mtype, const typename CallbackT<T>::MessageCallback &handler)
         {
             std::unique_lock<std::mutex> lock(_mutex);
@@ -43,7 +44,7 @@ namespace TrRpc
             _handlers.insert(std::make_pair(mtype, cb));
         }
 
-        // 提供给 client/server 设置 的 OnMessage （要满足参数的对应）
+        // 提供给 client/server 设置的 收到任何消息的入口，  (内部根据具体的消息类型调用到上面 registerHandler 注册好的不同的回调函数)
         void OnMessage(BaseConnection::ptr &conn, BaseMessage::ptr &msg)
         {
             std::unique_lock<std::mutex> lock(_mutex);

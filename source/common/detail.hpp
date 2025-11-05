@@ -20,8 +20,8 @@ namespace TrRpc
 #define DBG 1
 #define ERR 2
 
-#define LOGLEVEL DBG
-    // 日志宏
+#define LOGLEVEL INF
+// 日志宏
 // 宏定义的 '\'最好是行尾最后一个字符，和后面的换行符之间最后不要有空格
 #define LOG(level, format, ...)                                                                                        \
     do                                                                                                                 \
