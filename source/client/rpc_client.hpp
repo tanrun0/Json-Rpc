@@ -3,6 +3,7 @@
 #include "rpcaller.hpp"
 #include "rpc_registry.hpp"
 #include "../common/dispatcher.hpp"
+#include "rpc_topic.hpp"
 
 // 对 Rpc 业务客户端进行封装
 // 1. 服务注册客户端: 让服务提供者可以向服务中心进行注册服务
@@ -24,8 +25,9 @@ namespace TrRpc
             {
                 auto rsp_cb = std::bind(&Requestor::onResponse, _requestor.get(), std::placeholders::_1, std::placeholders::_2);
                 _dispatcher->registerHandler<BaseMessage>(MType::RSP_SERVICE, rsp_cb);
-                auto msg_cb = std::bind(&Dispatcher::OnMessage, _dispatcher.get(), std::placeholders::_1, std::placeholders::_2);
+                
                 _client = ClientFactory::create(ip, port);
+                auto msg_cb = std::bind(&Dispatcher::OnMessage, _dispatcher.get(), std::placeholders::_1, std::placeholders::_2);
                 _client->SetMessageCallback(msg_cb);
                 _client->connect();
             }
@@ -33,6 +35,10 @@ namespace TrRpc
             bool serviceRegistry(const std::string &method, const Address &host)
             {
                 return _provider->serviceRegistry(_client->connection(), method, host);
+            }
+            void shutdown()
+            {
+                _client->shutdown();
             }
 
         private:
@@ -220,6 +226,63 @@ namespace TrRpc
             // 长连接: 我们获得一个主机的时候，先看看连接池里面有没有对应的客户端连接可以复用
             std::unordered_map<Address, BaseClient::ptr, AddressHash> _rpc_clients; // 用于服务发现的客户端连接池
         };
+        class TopicClient
+        {
+        public:
+            using ptr = std::shared_ptr<TopicClient>;
+            TopicClient(const std::string &ip, int port)
+                : _requestor(std::make_shared<Requestor>()),
+                  _topic_manager(std::make_shared<TopicManager>(_requestor)),
+                  _dispatcher(std::make_shared<Dispatcher>())
+            {
+                // 响应回调处理
+                auto rsp_cb = std::bind(&Requestor::onResponse, _requestor.get(), std::placeholders::_1, std::placeholders::_2);
+                _dispatcher->registerHandler<BaseMessage>(MType::RSP_TOPIC, rsp_cb);
 
+                // 身为客户端，可能会收到 客户端发来的主题消息请求
+                auto req_cb = std::bind(&TopicManager::onPublish, _topic_manager.get(), std::placeholders::_1, std::placeholders::_2);
+                _dispatcher->registerHandler<TopicRequest>(MType::REQ_TOPIC, req_cb);
+                
+                _client = ClientFactory::create(ip, port);
+                auto msg_cb = std::bind(&Dispatcher::OnMessage, _dispatcher.get(), std::placeholders::_1, std::placeholders::_2);
+                _client->SetMessageCallback(msg_cb);
+                _client->connect();
+            }
+            // 客户端的业务接口:
+            bool create(const std::string &key)
+            {
+                return _topic_manager->create(_client->connection(), key);
+            }
+            bool remove(const std::string &key)
+            {
+                return _topic_manager->remove(_client->connection(), key);
+            }
+            // 订阅主题，并且传入: 后续收到订阅主题发来的消息以后的回调函数
+            bool subscribe(const std::string &key, const TopicManager::SubCallback &cb)
+            {
+                return _topic_manager->subscribe(_client->connection(), key, cb);
+            }
+            // 取消订阅
+            bool cancel(const std::string &key)
+            {
+                return _topic_manager->cancel(_client->connection(), key);
+            }
+            // 向主题发送消息: 用于 消息发送客户端
+            bool publish(const std::string &key, const std::string &msg)
+            {
+                return _topic_manager->publish(_client->connection(), key, msg);
+            }
+            // onPublish: 是被动回调的接口
+            void shutdown()
+            {
+                _client->shutdown();
+            }
+
+        private:
+            Requestor::ptr _requestor;
+            TopicManager::ptr _topic_manager;
+            Dispatcher::ptr _dispatcher;
+            BaseClient::ptr _client; // 里面包含 connnection
+        };
     }
 }
