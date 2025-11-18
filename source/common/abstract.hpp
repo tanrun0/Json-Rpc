@@ -6,7 +6,7 @@
 #include "fields.hpp"
 // 实现抽象层：设置好各模块的基类，具体的实现由子类继承实现
 
-// 通信抽象实现z
+// 通信抽象实现
 // 原始数据格式: |--len--|--mtype--|--idlen--|--id--|--body--|
 // BaseMessage: 被 protocol 解析后，直接存有: id, mytpe, body 成员
 // BaseMessage：是业务层消息抽象，里面存储着业务的核心消息, 如:ID, MType, 以及核心业务数据 body字段(都是被 protocol 反序列化后的), 是上层业务代码的处理对象
